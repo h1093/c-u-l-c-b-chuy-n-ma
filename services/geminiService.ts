@@ -1,7 +1,9 @@
 import { GoogleGenAI, Chat } from "@google/genai";
 import type { GameState, GeminiResponse } from '../types';
+import { getApiKey } from './apiKeyManager';
 
 let chat: Chat | null = null;
+let genAIInstance: GoogleGenAI | null = null;
 
 // FIX: Replaced backticks with single quotes for emphasis within the SYSTEM_INSTRUCTION string to prevent parsing errors.
 const SYSTEM_INSTRUCTION = `
@@ -186,12 +188,21 @@ Mục tiêu của bạn là trở thành một người kể chuyện bậc th�
 *   Tạo cảnh đầu tiên sau khi tạo nhân vật một cách hợp lý.
 `;
 
+const getGenAI = (): GoogleGenAI => {
+    if (!genAIInstance) {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            throw new Error("Khóa API cho Gemini chưa được cấu hình. Vui lòng cung cấp khóa API để tiếp tục.");
+        }
+        genAIInstance = new GoogleGenAI({ apiKey });
+    }
+    return genAIInstance;
+}
+
+
 const getChatSession = (): Chat => {
   if (!chat) {
-    if (!process.env.API_KEY) {
-      throw new Error("API key for Gemini is not configured.");
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = getGenAI();
     chat = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
@@ -207,8 +218,8 @@ const parseGeminiResponse = (text: string): GeminiResponse | null => {
     const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(cleanedText) as GeminiResponse;
   } catch (error) {
-    console.error("Failed to parse Gemini response:", error);
-    console.error("Raw response:", text);
+    console.error("Không thể phân tích phản hồi từ Gemini:", error);
+    console.error("Phản hồi thô:", text);
     return null;
   }
 };

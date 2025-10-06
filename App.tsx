@@ -3,7 +3,9 @@ import MainMenu from './components/MainMenu';
 import GameScreen from './components/GameScreen';
 import LoadingSpinner from './components/LoadingSpinner';
 import CharacterCreationScreen from './components/CharacterCreationScreen';
+import ApiKeyPrompt from './components/ApiKeyPrompt';
 import { startGame, sendChoice, finalizeCharacter, focusOnPoint, combineFragments } from './services/geminiService';
+import { getApiKey, setApiKey } from './services/apiKeyManager';
 import { GameStatus } from './types';
 import type { GameState, Scene } from './types';
 import { INITIAL_GAME_STATE, SAVE_GAME_KEY } from './constants';
@@ -14,16 +16,22 @@ const App: React.FC = () => {
   const [scene, setScene] = useState<Scene | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasSaveData, setHasSaveData] = useState<boolean>(false);
+  const [apiKey, setApiKeyState] = useState<string | undefined>(getApiKey());
 
   useEffect(() => {
     try {
       const savedGame = localStorage.getItem(SAVE_GAME_KEY);
       setHasSaveData(!!savedGame);
     } catch (e) {
-      console.error("Could not check for saved game:", e);
+      console.error("Không thể kiểm tra dữ liệu đã lưu:", e);
       setHasSaveData(false);
     }
   }, []);
+
+  const handleApiKeySubmit = (key: string) => {
+    setApiKey(key); // Lưu vào sessionStorage
+    setApiKeyState(key); // Cập nhật state của React để re-render
+  };
 
   const handleNewGame = useCallback(async () => {
     setStatus(GameStatus.Loading);
@@ -54,7 +62,7 @@ const App: React.FC = () => {
         setStatus(GameStatus.Playing);
       }
     } catch (e) {
-      console.error("Failed to load game:", e);
+      console.error("Không thể tải game:", e);
       setError("Không thể tải trò chơi đã lưu. Dữ liệu có thể đã bị hỏng.");
       setStatus(GameStatus.Error);
       localStorage.removeItem(SAVE_GAME_KEY);
@@ -70,7 +78,7 @@ const App: React.FC = () => {
         alert("Đã lưu trò chơi!");
         setHasSaveData(true);
       } catch (e) {
-        console.error("Failed to save game:", e);
+        console.error("Lưu game thất bại:", e);
         alert("Lưu trò chơi thất bại!");
       }
     }
@@ -220,6 +228,10 @@ const App: React.FC = () => {
 
 
   const renderContent = () => {
+    if (!apiKey) {
+      return <ApiKeyPrompt onApiKeySubmit={handleApiKeySubmit} />;
+    }
+
     switch (status) {
       case GameStatus.MainMenu:
         return <MainMenu onNewGame={handleNewGame} onLoadGame={handleLoadGame} hasSaveData={hasSaveData} />;
@@ -249,7 +261,13 @@ const App: React.FC = () => {
             <h2 className="text-3xl text-red-500 mb-4">Đã xảy ra lỗi</h2>
             <p className="text-gray-300 mb-8 max-w-md text-center">{error || "An unknown error occurred."}</p>
             <button
-              onClick={() => setStatus(GameStatus.MainMenu)}
+              onClick={() => {
+                // If the error is due to a bad API key, this allows the user to re-enter it.
+                if (error?.includes("API")) {
+                    setApiKeyState(undefined);
+                }
+                setStatus(GameStatus.MainMenu);
+              }}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg"
             >
               Quay về Menu Chính
