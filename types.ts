@@ -32,6 +32,12 @@ export interface MemoryFragment {
   description: string; // A short, evocative description
 }
 
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description: string;
+}
+
 export interface GameState {
   playerName: string;
   playerGender: string;
@@ -42,8 +48,9 @@ export interface GameState {
   playerDefiningTrait: string;
   playerStats: PlayerStats;
   relationships: Relationships;
-  inventory: string[];
+  inventory: InventoryItem[];
   storyFlags: StoryFlags;
+  knownCharacters: string[];
   journal: JournalEntry[];
   memoryFragments: MemoryFragment[];
   mentalState: number; // 0-100 scale
