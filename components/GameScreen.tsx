@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import type { Scene, Dialogue, GameState } from '../types';
 import JournalModal from './modals/JournalModal';
@@ -17,10 +18,20 @@ const GameScreen: React.FC<GameScreenProps> = ({ scene, gameState, onChoice, onF
   const contentEndRef = useRef<HTMLDivElement>(null);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isClubModalOpen, setIsClubModalOpen] = useState(false);
+  const [screenEffect, setScreenEffect] = useState('');
 
   useEffect(() => {
     contentEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [scene]);
+
+  useEffect(() => {
+    if (gameState.mentalState < 25) {
+      setScreenEffect('screen-shake');
+      // Remove the class after the animation finishes to allow it to be re-triggered
+      const timer = setTimeout(() => setScreenEffect(''), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.mentalState, scene.id]); // Re-trigger on scene change if state is still low
 
   const renderDialogue = (dialogue: Dialogue, index: number) => {
     const isSystem = dialogue.character.toLowerCase() === 'system';
@@ -62,7 +73,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ scene, gameState, onChoice, onF
     <>
     {isJournalOpen && <JournalModal journalEntries={gameState.journal} memoryFragments={gameState.memoryFragments} inventory={gameState.inventory} onClose={() => setIsJournalOpen(false)} onCombine={onCombineFragments} />}
     {isClubModalOpen && <ClubStatusModal relationships={gameState.relationships} knownCharacters={gameState.knownCharacters} onClose={() => setIsClubModalOpen(false)} />}
-    <div className="bg-gray-900 text-white min-h-screen flex flex-col justify-between p-4 sm:p-6 md:p-8">
+    <div className={`bg-gray-900 text-white min-h-screen flex flex-col justify-between p-4 sm:p-6 md:p-8 ${screenEffect}`}>
       <div className="absolute top-4 left-4 flex space-x-4">
         <div className="bg-black bg-opacity-50 p-2 rounded-lg">
             <p className="text-gray-300">Trạng thái: <span className="font-bold text-red-400">{gameState.mentalStateDescription}</span></p>
